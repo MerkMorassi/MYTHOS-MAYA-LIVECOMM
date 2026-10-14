@@ -211,6 +211,25 @@ export const IntercomStation: React.FC<IntercomStationProps> = ({
               className="w-4 h-4 accent-cyan-500 rounded cursor-pointer"
             />
           </div>
+
+          <div className="space-y-1.5 pt-2 border-t border-slate-800">
+            <span className="block font-semibold text-white">AI Persona & Behavior Prompt</span>
+            <textarea
+              value={intercomConfig.personaPrompt}
+              onChange={(e) =>
+                onConfigChange({
+                  ...intercomConfig,
+                  personaPrompt: e.target.value,
+                })
+              }
+              rows={3}
+              placeholder="Enter custom persona prompt (e.g. You are a cinematic film director, sharp, witty, and concise...)"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition resize-none font-mono"
+            />
+            <p className="text-[10px] text-slate-400">
+              Changes take effect immediately on the next AI turn.
+            </p>
+          </div>
         </div>
       )}
 
