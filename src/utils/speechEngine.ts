@@ -52,7 +52,100 @@ export function getBrowserVoices(): Promise<VoiceOption[]> {
 }
 
 /**
- * Returns the system Default Browser Voice
+ * Searches for Google UK English Female (en-GB) or best UK English / system fallback
+ */
+export function findGoogleUkEnglishFemaleOrBestEnGb(
+  voices: (VoiceOption | SpeechSynthesisVoice)[]
+): VoiceOption | null {
+  if (!voices || voices.length === 0) return null;
+
+  const toOption = (v: VoiceOption | SpeechSynthesisVoice): VoiceOption => ({
+    voiceURI: v.voiceURI,
+    name: v.name,
+    lang: v.lang,
+    isDefault: 'default' in v ? Boolean(v.default) : Boolean((v as VoiceOption).isDefault),
+    localService: Boolean(v.localService),
+  });
+
+  // 1. Exact or near match for Google UK English Female (en-GB)
+  const googleUkFemale = voices.find((v) => {
+    const name = v.name.toLowerCase();
+    const lang = v.lang.toLowerCase().replace('_', '-');
+    const isGoogle = name.includes('google');
+    const isUkOrEnGb = lang.startsWith('en-gb') || name.includes('uk english') || name.includes('united kingdom');
+    const isFemale = name.includes('female');
+    return isGoogle && isUkOrEnGb && isFemale;
+  });
+  if (googleUkFemale) return toOption(googleUkFemale);
+
+  // 2. Any Google voice with en-GB
+  const googleUk = voices.find((v) => {
+    const name = v.name.toLowerCase();
+    const lang = v.lang.toLowerCase().replace('_', '-');
+    return name.includes('google') && (lang.startsWith('en-gb') || name.includes('uk english'));
+  });
+  if (googleUk) return toOption(googleUk);
+
+  // 3. British English Female voices (e.g. Hazel, Susan, Serena, Martha, Stephanie, Libby, Sonia)
+  const ukFemaleKeywords = ['female', 'hazel', 'susan', 'serena', 'martha', 'stephanie', 'libby', 'sonia'];
+  const ukFemale = voices.find((v) => {
+    const name = v.name.toLowerCase();
+    const lang = v.lang.toLowerCase().replace('_', '-');
+    const isUk = lang.startsWith('en-gb') || name.includes('uk english') || name.includes('united kingdom');
+    const matchesKeyword = ukFemaleKeywords.some((kw) => name.includes(kw));
+    return isUk && matchesKeyword;
+  });
+  if (ukFemale) return toOption(ukFemale);
+
+  // 4. Any en-GB voice
+  const anyUk = voices.find((v) => {
+    const lang = v.lang.toLowerCase().replace('_', '-');
+    return lang.startsWith('en-gb') || v.name.toLowerCase().includes('uk english');
+  });
+  if (anyUk) return toOption(anyUk);
+
+  // 5. System default voice
+  const defaultVoice = voices.find((v) => ('default' in v ? v.default : (v as VoiceOption).isDefault));
+  if (defaultVoice) return toOption(defaultVoice);
+
+  // 6. Any English voice
+  const anyEn = voices.find((v) => v.lang.toLowerCase().startsWith('en'));
+  if (anyEn) return toOption(anyEn);
+
+  return toOption(voices[0]);
+}
+
+/**
+ * Returns the best local on-device voice (localService = true) for offline synthesis fallback
+ */
+export function findLocalFallbackVoice(
+  voices: (VoiceOption | SpeechSynthesisVoice)[]
+): VoiceOption | null {
+  if (!voices || voices.length === 0) return null;
+
+  const localVoices = voices.filter((v) => Boolean(v.localService));
+  if (localVoices.length === 0) {
+    // If browser doesn't flag localService explicitly, fall back to best match
+    return findGoogleUkEnglishFemaleOrBestEnGb(voices);
+  }
+
+  // 1. Local UK English voice (e.g. Hazel, Susan, Serena)
+  const localUk = localVoices.find((v) => {
+    const lang = v.lang.toLowerCase().replace('_', '-');
+    return lang.startsWith('en-gb') || v.name.toLowerCase().includes('uk');
+  });
+  if (localUk) return findGoogleUkEnglishFemaleOrBestEnGb([localUk]);
+
+  // 2. Any local English voice
+  const localEn = localVoices.find((v) => v.lang.toLowerCase().startsWith('en'));
+  if (localEn) return findGoogleUkEnglishFemaleOrBestEnGb([localEn]);
+
+  // 3. Any local voice
+  return findGoogleUkEnglishFemaleOrBestEnGb(localVoices);
+}
+
+/**
+ * Returns the system Default Browser Voice (default: Google UK English Female en-GB)
  */
 export function getDefaultBrowserVoice(): VoiceOption | null {
   if (cachedVoices.length === 0 && typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -61,31 +154,11 @@ export function getDefaultBrowserVoice(): VoiceOption | null {
 
   if (cachedVoices.length === 0) return null;
 
-  // 1. Look for explicit default flag
-  const defaultVoice = cachedVoices.find((v) => v.default);
-  if (defaultVoice) {
-    return {
-      voiceURI: defaultVoice.voiceURI,
-      name: defaultVoice.name,
-      lang: defaultVoice.lang,
-      isDefault: true,
-      localService: defaultVoice.localService,
-    };
-  }
-
-  // 2. Look for primary matching system voice (e.g. en-US)
-  const langMatch = cachedVoices.find((v) => v.lang.startsWith('en')) || cachedVoices[0];
-  return {
-    voiceURI: langMatch.voiceURI,
-    name: langMatch.name,
-    lang: langMatch.lang,
-    isDefault: false,
-    localService: langMatch.localService,
-  };
+  return findGoogleUkEnglishFemaleOrBestEnGb(cachedVoices);
 }
 
 /**
- * Speaks text using the Browser Voice via window.speechSynthesis
+ * Speaks text using the Browser Voice via window.speechSynthesis with Offline-First Fallback
  */
 export function speakBrowserVoice(
   text: string,
@@ -101,30 +174,100 @@ export function speakBrowserVoice(
 
   window.speechSynthesis.cancel(); // Cancel any ongoing utterance to prioritize immediate speech
 
-  const utterance = new SpeechSynthesisUtterance(text.trim());
-  utterance.rate = settings?.rate ?? 1.0;
-  utterance.pitch = settings?.pitch ?? 1.0;
-  utterance.volume = settings?.volume ?? 1.0;
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
-  if (settings?.voiceURI) {
-    const matchedVoice = cachedVoices.find((v) => v.voiceURI === settings.voiceURI);
-    if (matchedVoice) {
-      utterance.voice = matchedVoice;
+  const performSpeak = (targetVoice: SpeechSynthesisVoice | null, isRetry = false) => {
+    const utterance = new SpeechSynthesisUtterance(text.trim());
+    utterance.rate = settings?.rate ?? 1.0;
+    utterance.pitch = settings?.pitch ?? 1.0;
+    utterance.volume = settings?.volume ?? 1.0;
+
+    if (targetVoice) {
+      utterance.voice = targetVoice;
     }
-  } else {
-    // Pick default browser voice
-    const def = cachedVoices.find((v) => v.default) || cachedVoices[0];
-    if (def) {
-      utterance.voice = def;
+
+    let hasEnded = false;
+    const finish = () => {
+      if (!hasEnded) {
+        hasEnded = true;
+        if (watchdogTimer) clearTimeout(watchdogTimer);
+        onEnd?.();
+      }
+    };
+
+    utterance.onend = finish;
+
+    // Offline-first error fallback: if network voice fails due to network outage or synthesis failure
+    utterance.onerror = (e) => {
+      console.warn('SpeechSynthesis utterance error:', e.error);
+      if (!isRetry) {
+        // Find best local on-device voice and retry immediately
+        const localVoiceOption = findLocalFallbackVoice(cachedVoices);
+        if (localVoiceOption) {
+          const localVoice = cachedVoices.find((v) => v.voiceURI === localVoiceOption.voiceURI);
+          if (localVoice && localVoice !== targetVoice) {
+            console.info('Switching to local offline-first voice:', localVoice.name);
+            performSpeak(localVoice, true);
+            return;
+          }
+        }
+      }
+      finish();
+    };
+
+    // Watchdog timer: if a network voice hangs and never starts speaking due to flaky connection
+    let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
+    if (!isRetry && targetVoice && !targetVoice.localService) {
+      watchdogTimer = setTimeout(() => {
+        if (!window.speechSynthesis.speaking) {
+          console.warn('Network voice response timeout. Triggering local offline-first voice fallback.');
+          window.speechSynthesis.cancel();
+          const localOption = findLocalFallbackVoice(cachedVoices);
+          if (localOption) {
+            const localVoice = cachedVoices.find((v) => v.voiceURI === localOption.voiceURI);
+            if (localVoice) {
+              performSpeak(localVoice, true);
+              return;
+            }
+          }
+          finish();
+        }
+      }, 4000);
+    }
+
+    utterance.onstart = () => {
+      if (watchdogTimer) {
+        clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Resolve target voice
+  let selectedVoice: SpeechSynthesisVoice | null = null;
+
+  if (isOffline) {
+    // When offline, immediately pick a local on-device voice
+    const localOption = findLocalFallbackVoice(cachedVoices);
+    if (localOption) {
+      selectedVoice = cachedVoices.find((v) => v.voiceURI === localOption.voiceURI) || null;
     }
   }
 
-  if (onEnd) {
-    utterance.onend = onEnd;
-    utterance.onerror = () => onEnd();
+  if (!selectedVoice && settings?.voiceURI) {
+    selectedVoice = cachedVoices.find((v) => v.voiceURI === settings.voiceURI) || null;
   }
 
-  window.speechSynthesis.speak(utterance);
+  if (!selectedVoice) {
+    const preferredOption = findGoogleUkEnglishFemaleOrBestEnGb(cachedVoices);
+    if (preferredOption) {
+      selectedVoice = cachedVoices.find((v) => v.voiceURI === preferredOption.voiceURI) || null;
+    }
+  }
+
+  performSpeak(selectedVoice);
   return true;
 }
 

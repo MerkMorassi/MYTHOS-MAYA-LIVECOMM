@@ -12,6 +12,9 @@ import {
   Check,
   AlertCircle,
   VolumeX,
+  Battery,
+  BatteryCharging,
+  Zap,
 } from 'lucide-react';
 import { DeviceInfo, IntercomTurnState, TranscriptItem } from '../types';
 import { LiveVoiceClient } from '../utils/webrtcClient';

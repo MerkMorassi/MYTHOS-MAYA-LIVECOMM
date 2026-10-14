@@ -10,7 +10,7 @@ export interface WebRTCClientOptions {
   onTurnState?: (turnState: IntercomTurnState, speaker?: string, activeText?: string) => void;
   onRemoteStream?: (stream: MediaStream) => void;
   onLatencyUpdate?: (ms: number) => void;
-  onBatteryUpdate?: (level: number) => void;
+  onBatteryUpdate?: (level: number, charging?: boolean) => void;
 }
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -102,7 +102,7 @@ export class LiveVoiceClient {
             const rtt = Date.now() - msg.timestamp;
             this.options.onLatencyUpdate?.(Math.max(1, rtt));
           } else if (msg.type === 'battery-update') {
-            this.options.onBatteryUpdate?.(msg.level);
+            this.options.onBatteryUpdate?.(msg.level, Boolean(msg.charging));
           }
         } catch (e) {
           console.error('Error handling WS message:', e);
@@ -258,10 +258,11 @@ export class LiveVoiceClient {
     });
   }
 
-  public sendBatteryLevel(level: number): void {
+  public sendBatteryLevel(level: number, charging?: boolean): void {
     this.send({
       type: 'battery-update',
       level,
+      charging: Boolean(charging),
     });
   }
 

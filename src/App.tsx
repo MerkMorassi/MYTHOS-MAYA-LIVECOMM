@@ -19,7 +19,7 @@ import {
   VoiceSettings,
 } from './types';
 import { getAudioDevices } from './utils/audioDevices';
-import { getBrowserVoices, VoiceOption, speakBrowserVoice, stopBrowserVoice } from './utils/speechEngine';
+import { getBrowserVoices, getDefaultBrowserVoice, VoiceOption, speakBrowserVoice, stopBrowserVoice } from './utils/speechEngine';
 import { LiveVoiceClient } from './utils/webrtcClient';
 import { fetchInternalAiResponse, playIntercomChime } from './utils/turnManager';
 
@@ -43,6 +43,7 @@ export default function App() {
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [iphoneBattery, setIphoneBattery] = useState<number>(1);
+  const [iphoneCharging, setIphoneCharging] = useState<boolean>(false);
 
   // Browser Voice settings
   const [voices, setVoices] = useState<VoiceOption[]>([]);
@@ -121,7 +122,7 @@ export default function App() {
 
     getBrowserVoices().then((loadedVoices) => {
       setVoices(loadedVoices);
-      const defaultVoice = loadedVoices.find((v) => v.isDefault) || loadedVoices[0];
+      const defaultVoice = getDefaultBrowserVoice() || loadedVoices.find((v) => v.isDefault) || loadedVoices[0];
       if (defaultVoice) {
         setVoiceSettings((prev) => ({
           ...prev,
@@ -290,7 +291,10 @@ export default function App() {
       onIntercomTTS: (data) => {
         speakBrowserVoice(data.text, voiceSettingsRef.current);
       },
-      onBatteryUpdate: (level) => setIphoneBattery(level),
+      onBatteryUpdate: (level, charging) => {
+        setIphoneBattery(level);
+        setIphoneCharging(Boolean(charging));
+      },
     });
 
     voiceClientRef.current = client;
@@ -333,6 +337,7 @@ export default function App() {
           isSpeaking={isSpeaking}
           latencyHistory={latencyHistory}
           iphoneBattery={iphoneBattery}
+          iphoneCharging={iphoneCharging}
         />
       ) : (
         <IPhoneMicView

@@ -140,6 +140,15 @@ wss.on('connection', (ws: WebSocket, req) => {
           activeText: msg.activeText,
           timestamp: Date.now(),
         });
+      } else if (msg.type === 'battery-update') {
+        // Relay battery level and charging status from iPhone to Host TV and peers
+        broadcast({
+          type: 'battery-update',
+          senderId: clientId,
+          level: typeof msg.level === 'number' ? msg.level : 1,
+          charging: Boolean(msg.charging),
+          timestamp: Date.now(),
+        });
       } else if (msg.type === 'ping') {
         ws.send(JSON.stringify({
           type: 'pong',

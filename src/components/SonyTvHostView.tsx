@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Layers,
   Battery,
+  BatteryCharging,
 } from 'lucide-react';
 import { AudioDeviceOption, DeviceInfo, TranscriptItem, VoiceSettings } from '../types';
 import { AudioVisualizer } from './AudioVisualizer';
@@ -60,6 +61,7 @@ interface SonyTvHostViewProps {
   isSpeaking: boolean;
   latencyHistory: number[];
   iphoneBattery: number;
+  iphoneCharging?: boolean;
 }
 
 const QUICK_PHRASES = [
@@ -99,6 +101,7 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
   isSpeaking,
   latencyHistory,
   iphoneBattery,
+  iphoneCharging = false,
 }) => {
   // Local Windows Mic state
   const [isLocalMicActive, setIsLocalMicActive] = useState(false);
@@ -331,9 +334,23 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
                 }`}
               />
               {isIphoneConnected && (
-                <div className="flex items-center space-x-1 text-slate-300">
-                  <Battery className="w-3 h-3" />
-                  <span>{Math.round(iphoneBattery * 100)}%</span>
+                <div
+                  className={`flex items-center space-x-1.5 px-2 py-0.5 rounded-md font-mono text-[11px] ${
+                    iphoneBattery <= 0.2
+                      ? 'bg-rose-950/80 border border-rose-600/60 text-rose-300'
+                      : iphoneBattery <= 0.5
+                      ? 'bg-amber-950/80 border border-amber-600/60 text-amber-300'
+                      : 'bg-emerald-950/80 border border-emerald-600/60 text-emerald-300'
+                  }`}
+                  title={`iPhone Battery: ${Math.round(iphoneBattery * 100)}%${iphoneCharging ? ' (Charging)' : ''}`}
+                >
+                  {iphoneCharging ? (
+                    <BatteryCharging className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  ) : (
+                    <Battery className="w-3.5 h-3.5" />
+                  )}
+                  <span className="font-semibold">{Math.round(iphoneBattery * 100)}%</span>
+                  {iphoneCharging && <span className="text-[9px] uppercase tracking-wider text-amber-400 font-bold">CHG</span>}
                 </div>
               )}
             </div>
