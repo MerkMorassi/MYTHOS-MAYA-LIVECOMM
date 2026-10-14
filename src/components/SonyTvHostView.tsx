@@ -20,9 +20,11 @@ import {
   Check,
   Copy,
   ChevronDown,
+  Layers,
 } from 'lucide-react';
 import { AudioDeviceOption, DeviceInfo, TranscriptItem, VoiceSettings } from '../types';
 import { AudioVisualizer } from './AudioVisualizer';
+import { LatencySparkline } from './LatencySparkline';
 import { IntercomStation } from './IntercomStation';
 import { playSpeakerTestChime, isSetSinkIdSupported } from '../utils/audioDevices';
 import { speakBrowserVoice, stopBrowserVoice, LiveTranscriber, isSpeechRecognitionSupported } from '../utils/speechEngine';
@@ -54,6 +56,8 @@ interface SonyTvHostViewProps {
   onTriggerInternalAi: () => void;
   onReleaseTurnToBlackBox: () => void;
   onClearIntercomHistory: () => void;
+  isSpeaking: boolean;
+  latencyHistory: number[];
 }
 
 const QUICK_PHRASES = [
@@ -90,6 +94,8 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
   onTriggerInternalAi,
   onReleaseTurnToBlackBox,
   onClearIntercomHistory,
+  isSpeaking,
+  latencyHistory,
 }) => {
   // Local Windows Mic state
   const [isLocalMicActive, setIsLocalMicActive] = useState(false);
@@ -104,7 +110,7 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
 
   // Browser Voice Speech state
   const [speechInputText, setSpeechInputText] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  // isSpeaking is passed as prop
 
   // Remote iPhone presence
   const iphoneDevice = devices.find((d) => d.role === 'iphone-mic');
@@ -202,9 +208,9 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
   // Handle instant TTS speech dispatch
   const handleSpeakText = (textToSpeak: string) => {
     if (!textToSpeak.trim()) return;
-    setIsSpeaking(true);
+    // isSpeaking is controlled by parent prop
     speakBrowserVoice(textToSpeak, voiceSettings, () => {
-      setIsSpeaking(false);
+      // isSpeaking is controlled by parent prop
     });
     // Broadcast to peer devices so iPhone also sees it
     voiceClient?.sendIntercomTTS(textToSpeak);
@@ -245,6 +251,21 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
     const link = document.createElement('a');
     link.href = url;
     link.download = `zoe-transcript-session-${sessionDate.toISOString().slice(0, 10)}_${sessionDate.getHours()}-${sessionDate.getMinutes()}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export intercom history to a JSON file (.json)
+  const handleExportJson = () => {
+    if (intercomMessages.length === 0) return;
+
+    const blob = new Blob([JSON.stringify(intercomMessages, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `zoe-intercom-history-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -442,7 +463,16 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
                 title="Download current transcript session as plain text (.txt)"
               >
                 <Download className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="font-semibold">Download Transcript (.txt)</span>
+                <span className="font-semibold">.txt</span>
+              </button>
+              <button
+                onClick={handleExportJson}
+                disabled={intercomMessages.length === 0}
+                className="px-2.5 py-1 bg-purple-950/70 hover:bg-purple-900/90 text-purple-300 hover:text-white border border-purple-700/50 rounded text-[11px] font-mono flex items-center space-x-1.5 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"
+                title="Download intercom history as JSON (.json)"
+              >
+                <Layers className="w-3.5 h-3.5 text-purple-400" />
+                <span className="font-semibold">.json</span>
               </button>
               <button
                 onClick={onClearTranscripts}
@@ -552,7 +582,7 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
 
             <AudioVisualizer
               analyser={analyser}
-              isActive={isLocalMicActive || isIphoneConnected}
+              isActive={isLocalMicActive || isIphoneConnected || isSpeaking}
               theme="tv-cinematic"
               label={isIphoneConnected ? 'IPHONE + SONY TV HDMI STEREO' : 'WINDOWS AUDIO CHAIN'}
             />
@@ -560,7 +590,10 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
             {/* Quick telemetry */}
             <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
               <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/60">
-                <span className="text-slate-500 block text-[9px] uppercase">Latency</span>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-500 block text-[9px] uppercase">Latency</span>
+                  <LatencySparkline data={latencyHistory} />
+                </div>
                 <span className="text-cyan-400 font-bold">{latency} ms</span>
               </div>
               <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800/60">

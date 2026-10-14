@@ -30,6 +30,7 @@ export default function App() {
   // Connected devices & connection metrics
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [latency, setLatency] = useState<number>(12);
+  const [latencyHistory, setLatencyHistory] = useState<number[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('connecting');
 
   // Audio I/O devices
@@ -40,6 +41,7 @@ export default function App() {
 
   // Transcripts list
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Browser Voice settings
   const [voices, setVoices] = useState<VoiceOption[]>([]);
@@ -187,8 +189,10 @@ export default function App() {
       voiceClientRef.current?.sendTurnState('internal_speaking', 'Internal Local AI', responseText);
 
       // Speak aloud through SONY TV speakers via Browser Voice
+      setIsSpeaking(true);
       speakBrowserVoice(responseText, voiceSettingsRef.current, () => {
         isInternalAiSpeakingRef.current = false;
+        setIsSpeaking(false);
         // Turn completed: yield floor back to Black Box AI
         if (intercomConfigRef.current.intercomChirpEnabled) {
           playIntercomChime('turn_handover');
@@ -235,7 +239,10 @@ export default function App() {
       deviceName: clientName,
       onStatusChange: (status) => setConnectionStatus(status),
       onDevicesUpdate: (updatedDevices) => setDevices(updatedDevices),
-      onLatencyUpdate: (ms) => setLatency(ms),
+      onLatencyUpdate: (ms) => {
+        setLatency(ms);
+        setLatencyHistory((prev) => [...prev.slice(-59), ms]);
+      },
       onTranscript: (item) => {
         setTranscripts((prev) => {
           const existingIndex = prev.findIndex((t) => t.id === item.id);
@@ -293,7 +300,7 @@ export default function App() {
   }, [mode, triggerInternalAiTurn]);
 
   return (
-    <div className="min-h-screen bg-[#070a12] text-slate-100 font-sans antialiased">
+    <div className="scroll">
       {mode === 'host-tv' ? (
         <SonyTvHostView
           devices={devices}
@@ -320,6 +327,8 @@ export default function App() {
           onTriggerInternalAi={() => triggerInternalAiTurn()}
           onReleaseTurnToBlackBox={releaseTurnToBlackBox}
           onClearIntercomHistory={() => setIntercomMessages([])}
+          isSpeaking={isSpeaking}
+          latencyHistory={latencyHistory}
         />
       ) : (
         <IPhoneMicView

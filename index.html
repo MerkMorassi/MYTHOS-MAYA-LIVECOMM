@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ZoeVoice" />
+    <meta name="format-detection" content="telephone=no, date=no, email=no, address=no" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
     <title>Zoe Voice Bridge</title>
     <meta name="description" content="Low-latency wireless voice streaming and real-time transcription bridge connecting iPhone, Windows MIC, and SONY TV audio display." />
     <meta property="og:title" content="Zoe Voice Bridge" />
@@ -12,6 +19,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Safari tabs ignore user-scalable=no for accessibility, so block pinch by hand
+      document.addEventListener('gesturestart', e => e.preventDefault());
+      document.addEventListener('gesturechange', e => e.preventDefault());
+      document.addEventListener('touchmove', e => {
+        if (e.touches.length > 1) e.preventDefault();
+      }, { passive: false });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

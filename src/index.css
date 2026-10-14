@@ -1,1 +1,39 @@
 @import "tailwindcss";
+
+html, body {
+  margin: 0; padding: 0;
+  height: 100%;
+  overflow: hidden; /* no page bounce */
+  overscroll-behavior: none;
+  background: #000;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body {
+  position: fixed; inset: 0; /* locks the shell like a native view */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none; /* no long-press menu */
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation; /* kills double-tap zoom */
+}
+#root {
+  height: 100dvh;
+  display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+  env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-sizing: border-box;
+}
+.scroll { /* use this for any scrolling region */
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+input, textarea, select {
+  font-size: 16px; /* under 16px makes iOS zoom on focus */
+  -webkit-user-select: text;
+  user-select: text;
+}
