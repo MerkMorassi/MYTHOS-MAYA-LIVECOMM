@@ -119,7 +119,7 @@ export const VoiceSettingsDrawer: React.FC<VoiceSettingsDrawerProps> = ({
           </div>
 
           {/* Auto-Speak incoming iPhone transcripts toggle */}
-          <div className="pt-2 border-t border-slate-800">
+          <div className="pt-2 border-t border-slate-800 space-y-2">
             <label className="flex items-center justify-between p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 cursor-pointer">
               <div className="space-y-0.5 pr-2">
                 <span className="text-xs font-semibold text-white block">Auto-Read Incoming iPhone Speech</span>
@@ -132,6 +132,20 @@ export const VoiceSettingsDrawer: React.FC<VoiceSettingsDrawerProps> = ({
                 checked={settings.autoSpeakIncoming}
                 onChange={(e) => onSettingsChange({ ...settings, autoSpeakIncoming: e.target.checked })}
                 className="w-4 h-4 accent-emerald-500 rounded cursor-pointer shrink-0"
+              />
+            </label>
+            <label className="flex items-center justify-between p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 cursor-pointer">
+              <div className="space-y-0.5 pr-2">
+                <span className="text-xs font-semibold text-white block">Real-time VAD Processing</span>
+                <span className="text-[11px] text-slate-400 block">
+                  Enable aggressive speech filtering for cleaner transcription
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.vadEnabled}
+                onChange={(e) => onSettingsChange({ ...settings, vadEnabled: e.target.checked })}
+                className="w-4 h-4 accent-cyan-500 rounded cursor-pointer shrink-0"
               />
             </label>
           </div>

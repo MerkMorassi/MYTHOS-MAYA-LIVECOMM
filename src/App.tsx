@@ -42,6 +42,7 @@ export default function App() {
   // Transcripts list
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [iphoneBattery, setIphoneBattery] = useState<number>(1);
 
   // Browser Voice settings
   const [voices, setVoices] = useState<VoiceOption[]>([]);
@@ -51,6 +52,7 @@ export default function App() {
     pitch: 1.0,
     volume: 1.0,
     autoSpeakIncoming: false,
+    vadEnabled: false,
   });
 
   // Intercom Turn-Taking Conversation State
@@ -288,6 +290,7 @@ export default function App() {
       onIntercomTTS: (data) => {
         speakBrowserVoice(data.text, voiceSettingsRef.current);
       },
+      onBatteryUpdate: (level) => setIphoneBattery(level),
     });
 
     voiceClientRef.current = client;
@@ -329,6 +332,7 @@ export default function App() {
           onClearIntercomHistory={() => setIntercomMessages([])}
           isSpeaking={isSpeaking}
           latencyHistory={latencyHistory}
+          iphoneBattery={iphoneBattery}
         />
       ) : (
         <IPhoneMicView

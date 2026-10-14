@@ -21,6 +21,7 @@ import {
   Copy,
   ChevronDown,
   Layers,
+  Battery,
 } from 'lucide-react';
 import { AudioDeviceOption, DeviceInfo, TranscriptItem, VoiceSettings } from '../types';
 import { AudioVisualizer } from './AudioVisualizer';
@@ -58,6 +59,7 @@ interface SonyTvHostViewProps {
   onClearIntercomHistory: () => void;
   isSpeaking: boolean;
   latencyHistory: number[];
+  iphoneBattery: number;
 }
 
 const QUICK_PHRASES = [
@@ -96,6 +98,7 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
   onClearIntercomHistory,
   isSpeaking,
   latencyHistory,
+  iphoneBattery,
 }) => {
   // Local Windows Mic state
   const [isLocalMicActive, setIsLocalMicActive] = useState(false);
@@ -327,7 +330,22 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
                   isIphoneConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
                 }`}
               />
+              {isIphoneConnected && (
+                <div className="flex items-center space-x-1 text-slate-300">
+                  <Battery className="w-3 h-3" />
+                  <span>{Math.round(iphoneBattery * 100)}%</span>
+                </div>
+              )}
             </div>
+
+            <button
+              onClick={() => onConfigChange({...intercomConfig, autoTurnEnabled: !intercomConfig.autoTurnEnabled})}
+              className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center space-x-1.5 transition ${
+                intercomConfig.autoTurnEnabled ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-slate-700 text-slate-300'
+              }`}
+            >
+              {intercomConfig.autoTurnEnabled ? 'Pause Conversation' : 'Resume Conversation'}
+            </button>
 
             {/* QR Code Button */}
             <button
@@ -510,18 +528,30 @@ export const SonyTvHostView: React.FC<SonyTvHostViewProps> = ({
                   return (
                     <div
                       key={t.id}
-                      className="group relative p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition"
+                      className={`group relative p-3.5 rounded-xl bg-slate-900/60 border ${
+                        isIphone ? 'border-cyan-800/80' : 'border-purple-800/80'
+                      } hover:border-slate-600 transition`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center space-x-2">
                           <span
-                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                            className={`flex items-center space-x-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
                               isIphone
                                 ? 'bg-cyan-950 text-cyan-300 border border-cyan-800/50'
                                 : 'bg-purple-950 text-purple-300 border border-purple-800/50'
                             }`}
                           >
-                            {isIphone ? 'iPhone Wireless Mic' : 'Windows Mic Host'}
+                            {isIphone ? (
+                                <>
+                                    <Smartphone className="w-3 h-3" />
+                                    <span>iPhone Wireless Mic</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Mic className="w-3 h-3" />
+                                    <span>Windows Mic Host</span>
+                                </>
+                            )}
                           </span>
                           <span className="text-[11px] text-slate-500 font-mono">
                             {new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}

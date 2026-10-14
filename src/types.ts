@@ -29,6 +29,7 @@ export interface VoiceSettings {
   pitch: number;
   volume: number;
   autoSpeakIncoming: boolean;
+  vadEnabled: boolean;
 }
 
 export type IntercomTurnState =
